@@ -53,5 +53,9 @@ echo "Waiting for all background processes to complete..."
 # Wait for all background jobs to complete
 wait
 
+# Optional: Kill any remaining background processes (cleanup)
+echo "Cleaning up any remaining background processes..."
+kill %1 %2 %3 %4 %5 2>/dev/null || true
+
 echo "All parallel Pokémon data fetch completed!"
 echo "Check errors.txt for any failed requests." 
