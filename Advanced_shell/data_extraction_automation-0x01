@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Extract fields using jq
+NAME=$(jq -r '.name' data.json | sed 's/.*/\u&/')
+HEIGHT=$(jq -r '.height' data.json)
+WEIGHT=$(jq -r '.weight' data.json)
+TYPE=$(jq -r '.types[0].type.name' data.json | sed 's/.*/\u&/')
+
+# Convert height (decimetres to metres) and weight (hectograms to kg)
+HEIGHT_M=$(awk "BEGIN { printf \"%.1f\", $HEIGHT/10 }")
+WEIGHT_KG=$(awk "BEGIN { printf \"%.0f\", $WEIGHT/10 }")
+
+# Print in the required format
+echo "$NAME is of type $TYPE, weighs ${WEIGHT_KG}kg, and is ${HEIGHT_M}m tall." 
