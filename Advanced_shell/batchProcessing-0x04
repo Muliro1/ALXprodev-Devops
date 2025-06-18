@@ -39,27 +39,19 @@ fetch_pokemon_data() {
 # Main execution
 echo "Starting parallel Pokémon data fetch..."
 
-# Array to store background process IDs
-declare -a pids
-
 # Start background processes for each Pokémon
 for pokemon in "${POKEMON_LIST[@]}"; do
     echo "Starting background process for $pokemon..."
     fetch_pokemon_data "$pokemon" &
-    pids+=($!)
 done
 
-echo "All background processes started. Waiting for completion..."
+echo "All background processes started. Current jobs:"
+jobs
 
-# Wait for all background processes to complete
-for pid in "${pids[@]}"; do
-    wait $pid
-    if [ $? -eq 0 ]; then
-        echo "Process $pid completed successfully"
-    else
-        echo "Process $pid failed"
-    fi
-done
+echo "Waiting for all background processes to complete..."
+
+# Wait for all background jobs to complete
+wait
 
 echo "All parallel Pokémon data fetch completed!"
 echo "Check errors.txt for any failed requests." 
