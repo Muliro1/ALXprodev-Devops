@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# List of Pokémon to fetch
+POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
+
+# Base URL for the Pokémon API
+BASE_URL="https://pokeapi.co/api/v2/pokemon"
+
+# Maximum number of retry attempts
+MAX_RETRIES=3
+
+# Function to fetch Pokémon data with retry logic
+fetch_pokemon_data() {
+    local pokemon=$1
+    local retry_count=0
+    
+    while [ $retry_count -lt $MAX_RETRIES ]; do
+        echo "[$pokemon] Attempting to fetch data (attempt $((retry_count + 1))/$MAX_RETRIES)..."
+        
+        # Make the API request with timeout
+        if curl -s -f --max-time 30 "$BASE_URL/$pokemon" -o "$pokemon.json" 2>/dev/null; then
+            echo "[$pokemon] Successfully fetched data and saved to $pokemon.json"
+            return 0
+        else
+            retry_count=$((retry_count + 1))
+            if [ $retry_count -lt $MAX_RETRIES ]; then
+                echo "[$pokemon] Failed to fetch (attempt $retry_count). Retrying..."
+                sleep 1
+            fi
+        fi
+    done
+    
+    # If all retries failed, log the error
+    echo "Failed to fetch data for $pokemon after $MAX_RETRIES attempts at $(date)" >> errors.txt
+    echo "[$pokemon] All attempts failed. Skipping..."
+    return 1
+}
+
+# Main execution
+echo "Starting parallel Pokémon data fetch..."
+
+# Array to store background process IDs
+declare -a pids
+
+# Start background processes for each Pokémon
+for pokemon in "${POKEMON_LIST[@]}"; do
+    echo "Starting background process for $pokemon..."
+    fetch_pokemon_data "$pokemon" &
+    pids+=($!)
+done
+
+echo "All background processes started. Waiting for completion..."
+
+# Wait for all background processes to complete
+for pid in "${pids[@]}"; do
+    wait $pid
+    if [ $? -eq 0 ]; then
+        echo "Process $pid completed successfully"
+    else
+        echo "Process $pid failed"
+    fi
+done
+
+echo "All parallel Pokémon data fetch completed!"
+echo "Check errors.txt for any failed requests." 
