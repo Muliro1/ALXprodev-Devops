@@ -9,25 +9,48 @@ BASE_URL="https://pokeapi.co/api/v2/pokemon"
 # Delay between requests (in seconds) to avoid rate limiting
 DELAY=1
 
-# Loop through each Pokémon
+# Maximum number of retry attempts
+MAX_RETRIES=3
+
+# Function to fetch Pokémon data with retry logic
+fetch_pokemon_data() {
+    local pokemon=$1
+    local retry_count=0
+    
+    while [ $retry_count -lt $MAX_RETRIES ]; do
+        echo "Attempting to fetch data for $pokemon (attempt $((retry_count + 1))/$MAX_RETRIES)..."
+        
+        # Make the API request with timeout
+        if curl -s -f --max-time 30 "$BASE_URL/$pokemon" -o "$pokemon.json" 2>/dev/null; then
+            echo "Successfully fetched data for $pokemon and saved to $pokemon.json"
+            return 0
+        else
+            retry_count=$((retry_count + 1))
+            if [ $retry_count -lt $MAX_RETRIES ]; then
+                echo "Failed to fetch $pokemon (attempt $retry_count). Retrying in $DELAY seconds..."
+                sleep $DELAY
+            fi
+        fi
+    done
+    
+    # If all retries failed, log the error
+    echo "Failed to fetch data for $pokemon after $MAX_RETRIES attempts at $(date)" >> errors.txt
+    echo "Skipping $pokemon and continuing with next Pokémon..."
+    return 1
+}
+
+# Main execution
+echo "Starting Pokémon data fetch with robust error handling..."
+
 for pokemon in "${POKEMON_LIST[@]}"; do
-    echo "Fetching data for $pokemon..."
+    fetch_pokemon_data "$pokemon"
     
-    # Make the API request
-    curl -s -f "$BASE_URL/$pokemon" -o "$pokemon.json" 2>>errors.txt
-    
-    # Check if the request was successful
-    if [ $? -eq 0 ]; then
-        echo "Successfully fetched data for $pokemon and saved to $pokemon.json"
-    else
-        echo "Failed to fetch data for $pokemon" >> errors.txt
-    fi
-    
-    # Add delay between requests to avoid rate limiting
+    # Add delay between different Pokémon requests
     if [ "$pokemon" != "${POKEMON_LIST[-1]}" ]; then
-        echo "Waiting $DELAY seconds before next request..."
+        echo "Waiting $DELAY seconds before next Pokémon..."
         sleep $DELAY
     fi
 done
 
-echo "All Pokémon data has been fetched!" 
+echo "Pokémon data fetch completed!"
+echo "Check errors.txt for any failed requests." 
